@@ -1,0 +1,8 @@
+numpy>=2.0
+scipy>=1.10
+matplotlib>=3.5
+h5py>=3.8
+tables>=3.8
+PyWavelets>=1.4
+torch>=2.0
+torchaudio>=2.0
