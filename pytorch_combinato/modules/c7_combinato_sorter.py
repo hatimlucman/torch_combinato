@@ -14,6 +14,8 @@ from modules.c5_template_matcher import TemplateMatcher
 from modules.c5b_total_matcher import TotalMatcher
 from modules.c6_artifact_detector import ArtifactDetector
 
+MIN_SPIKES_FOR_SPC = 15
+
 
 class CombinatorSorter(Block):
     def __init__(self, cluster_path, seed=12345.0):
@@ -70,6 +72,17 @@ class CombinatorSorter(Block):
             spikes = torch.tensor(spikes, dtype=torch.float32)
 
         print(f"\nSorting {sign} spikes: {spikes.shape}")
+
+        # Skip SPC if too few spikes
+        if spikes.shape[0] < MIN_SPIKES_FOR_SPC:
+            print(f"  Skipping SPC: only {spikes.shape[0]} spikes (need {MIN_SPIKES_FOR_SPC})")
+            N = spikes.shape[0]
+            return {
+                "sort_idx": np.zeros(N, dtype=np.uint16),
+                "match_idx": np.zeros(N, dtype=np.int8),
+                "distance": np.zeros(N, dtype=np.float32),
+                "artifact_ids": []
+            }
 
         sort_idx = self._cluster(spikes, folder)
 

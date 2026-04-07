@@ -1,1 +1,1 @@
-clustered 110 spikes in 0.3217s
+clustered 110 spikes in 0.0171s
