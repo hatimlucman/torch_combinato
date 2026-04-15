@@ -15,17 +15,17 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from modules.m1_preprocessor import Preprocessor
-from modules.m2_threshold_detector import ThresholdDetector
-from modules.m3_waveform_extractor import WaveformExtractor
-from modules.m4_cubic_upsampler import CubicUpsampler
-from modules.m5_peak_aligner import PeakAligner
-from modules.c1_wavelet_features import WaveletFeatureExtractor
-from modules.c2_feature_selector import FeatureSelector
-from modules.c3_spc_clusterer import SPCClusterer
-from modules.c4_cluster_definer import ClusterDefiner
-from modules.c5_template_matcher import TemplateMatcher
-from modules.c6_artifact_detector import ArtifactDetector
+from .modules.m1_preprocessor import Preprocessor
+from .modules.m2_threshold_detector import ThresholdDetector
+from .modules.m3_waveform_extractor import WaveformExtractor
+from .modules.m4_cubic_upsampler import CubicUpsampler
+from .modules.m5_peak_aligner import PeakAligner
+from .modules.c1_wavelet_features import WaveletFeatureExtractor
+from .modules.c2_feature_selector import FeatureSelector
+from .modules.c3_spc_clusterer import SPCClusterer
+from .modules.c4_cluster_definer import ClusterDefiner
+from .modules.c5_template_matcher import TemplateMatcher
+from .modules.c6_artifact_detector import ArtifactDetector
 
 
 class OptimizedCombinato(nn.Module):
