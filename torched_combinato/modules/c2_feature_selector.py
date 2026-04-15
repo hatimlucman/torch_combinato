@@ -11,7 +11,7 @@ Uses Kolmogorov-Smirnov test to identify non-Gaussian features.
 
 import torch
 import numpy as np
-from modules.block import Block
+from .block import Block
 
 FEATURE_FACTOR = 3
 N_FEATURES_OUT = 10

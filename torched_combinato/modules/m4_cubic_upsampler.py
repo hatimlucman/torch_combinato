@@ -11,7 +11,7 @@ Produces identical results to scipy.interpolate.make_interp_spline.
 
 import torch
 import numpy as np
-from modules.block import Block
+from .block import Block
 
 
 def build_cubic_spline_matrix(n_input, n_output, factor):

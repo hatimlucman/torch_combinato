@@ -8,7 +8,7 @@ BATCHED: Processes all channels in parallel where possible.
 """
 
 import torch
-from modules.block import Block
+from .block import Block
 
 
 class ThresholdDetector(Block):

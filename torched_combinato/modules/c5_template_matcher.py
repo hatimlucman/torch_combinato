@@ -9,7 +9,7 @@ Fully GPU-compatible.
 """
 
 import torch
-from modules.block import Block
+from .block import Block
 
 CLID_UNMATCHED = 0
 FIRST_MATCH_FACTOR = 0.75

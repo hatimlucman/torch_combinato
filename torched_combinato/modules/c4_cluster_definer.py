@@ -8,7 +8,7 @@ Fully GPU-compatible with tensor-only operations.
 """
 
 import torch
-from modules.block import Block
+from .block import Block
 
 MAX_CLUSTERS_PER_TEMP = 5
 MIN_SPIKES_PER_CLUSTER = 15

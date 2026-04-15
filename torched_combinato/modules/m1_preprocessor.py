@@ -16,7 +16,7 @@ import torch
 import torchaudio
 import numpy as np
 from scipy.signal import ellip
-from modules.block import Block
+from .block import Block
 
 DETECT_LOW   = 300
 DETECT_HIGH  = 1000

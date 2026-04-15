@@ -6,7 +6,7 @@ Takes spike peak indices from M2 and cuts out waveforms from the filtered signal
 
 import torch
 import numpy as np
-from modules.block import Block
+from .block import Block
 
 INDICES_PER_SPIKE = 64
 INDEX_MAXIMUM     = 19

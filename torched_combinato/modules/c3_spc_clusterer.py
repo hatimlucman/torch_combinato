@@ -9,7 +9,7 @@ import time
 import subprocess
 import numpy as np
 import torch
-from modules.block import Block
+from .block import Block
 
 options = {
     'ClusterPath': r'C:\Users\hp\Downloads\combinato\spc\cluster.exe',

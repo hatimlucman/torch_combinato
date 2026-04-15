@@ -9,7 +9,7 @@ Peak finding matches original logic exactly.
 """
 
 import torch
-from modules.block import Block
+from .block import Block
 
 ARTIFACT_CRITERIA = {
     'maxima': 5,

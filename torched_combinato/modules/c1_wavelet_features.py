@@ -11,7 +11,7 @@ Produces identical results to pywt.wavedec(spike, 'haar', level=4).
 
 import torch
 import numpy as np
-from modules.block import Block
+from .block import Block
 
 WAVELET = 'haar'
 LEVEL = 4

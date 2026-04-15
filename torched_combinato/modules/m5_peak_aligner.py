@@ -8,7 +8,7 @@ VECTORIZED: Fully vectorized for speed while matching original Combinato exactly
 """
 
 import torch
-from modules.block import Block
+from .block import Block
 
 
 class PeakAligner(Block):
