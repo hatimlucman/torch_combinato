@@ -66,7 +66,7 @@ class BenchmarkConfig:
     raw_path: Path = Path("raw.bin")
     sample_rate: int = 30000
     num_channels: int = 384
-    results_dir: Path = Path("results")
+    results_dir: Path = Path(".")
     n_runs: int = 3
     variants: List[str] = field(default_factory=lambda: list(ALL_VARIANTS))
     check_channel: int = 174
@@ -387,7 +387,7 @@ def parse_args() -> BenchmarkConfig:
     parser.add_argument("--sample-rate", type=int, default=30000)
     parser.add_argument("--num-channels", type=int, default=384)
     parser.add_argument("--n-runs", type=int, default=3, help="Runs per variant")
-    parser.add_argument("--results-dir", type=Path, default=Path("results"))
+    parser.add_argument("--results-dir", type=Path, default=Path("."))
     parser.add_argument("--variants", nargs="+", default=ALL_VARIANTS, choices=ALL_VARIANTS)
     parser.add_argument("--check-channel", type=int, default=174)
     args = parser.parse_args()

@@ -69,7 +69,7 @@ class BenchmarkConfig:
     raw_path: Path = Path("raw.bin")
     sample_rate: int = 30000
     num_channels: int = 384
-    results_dir: Path = Path("results")
+    results_dir: Path = Path(".")
     n_runs: int = 3
     variants: List[str] = field(default_factory=lambda: list(ALL_VARIANTS))
     spc_path: str = "~/spc/cluster_linux64.exe"
@@ -434,7 +434,7 @@ def plot_stacked_bar(results, out_path):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("raw_path", type=Path); parser.add_argument("--sample-rate", type=int, default=30000); parser.add_argument("--num-channels", type=int, default=384)
-    parser.add_argument("--n-runs", type=int, default=3); parser.add_argument("--results-dir", type=Path, default=Path("results")); parser.add_argument("--variants", nargs="+", default=ALL_VARIANTS, choices=ALL_VARIANTS)
+    parser.add_argument("--n-runs", type=int, default=3); parser.add_argument("--results-dir", type=Path, default=Path(".")); parser.add_argument("--variants", nargs="+", default=ALL_VARIANTS, choices=ALL_VARIANTS)
     parser.add_argument("--spc-path", default="~/spc/cluster_linux64.exe"); parser.add_argument("--check-channel", type=int, default=174)
     args = parser.parse_args()
     return BenchmarkConfig(raw_path=args.raw_path, sample_rate=args.sample_rate, num_channels=args.num_channels, results_dir=args.results_dir, n_runs=args.n_runs, variants=args.variants, spc_path=args.spc_path, check_channel=args.check_channel)
