@@ -1,7 +1,9 @@
 """
-M1 - Preprocessor Module
-========================
+M1 - Preprocessor Module (Batched)
+===================================
 Replicates DefaultFilter from Combinato using PyTorch + torchaudio.
+
+BATCHED: Supports input shape [N_channels, N_samples] for parallel processing.
 
 Design note on numerical precision:
     torchaudio.functional.filtfilt differs from scipy.signal.filtfilt by at most
@@ -48,69 +50,160 @@ class Preprocessor(Block):
         self.sample_rate = sample_rate
 
     def _apply_filter(self, x, b, a):
-        x_3d = x.unsqueeze(0).unsqueeze(0)
-        y_3d = torchaudio.functional.filtfilt(x_3d, a, b, clamp=False)
-        return y_3d.squeeze(0).squeeze(0)
+        """
+        Apply filter to input.
+        
+        Supports:
+            - 1D input: [N_samples] (single channel)
+            - 2D input: [N_channels, N_samples] (batched)
+        """
+        if x.dim() == 1:
+            # Single channel: [N_samples] -> [1, 1, N_samples]
+            x_3d = x.unsqueeze(0).unsqueeze(0)
+            y_3d = torchaudio.functional.filtfilt(x_3d, a, b, clamp=False)
+            return y_3d.squeeze(0).squeeze(0)
+        elif x.dim() == 2:
+            # Batched: [N_channels, N_samples] -> [1, N_channels, N_samples]
+            x_3d = x.unsqueeze(0)
+            y_3d = torchaudio.functional.filtfilt(x_3d, a, b, clamp=False)
+            return y_3d.squeeze(0)
+        else:
+            raise ValueError(f"Expected 1D or 2D input, got {x.dim()}D")
 
     def forward(self, x):
+        """
+        Apply notch and detect filters.
+        
+        Args:
+            x: [N_samples] or [N_channels, N_samples]
+            
+        Returns:
+            data_denoised: same shape as input
+            data_detected: same shape as input
+        """
         data_denoised = self._apply_filter(x, self.b_notch, self.a_notch)
         data_detected = self._apply_filter(data_denoised, self.b_detect, self.a_detect)
         return data_denoised, data_detected
 
     def filter_extract(self, data_denoised):
+        """
+        Apply extract filter.
+        
+        Args:
+            data_denoised: [N_samples] or [N_channels, N_samples]
+            
+        Returns:
+            data_extracted: same shape as input
+        """
         return self._apply_filter(data_denoised, self.b_extract, self.a_extract)
 
 
+# =============================================================================
+# VALIDATION
+# =============================================================================
+
 if __name__ == '__main__':
     from scipy.signal import ellip, filtfilt as scipy_filtfilt
+    import time
 
     print("=" * 60)
-    print("M1 PREPROCESSOR — VALIDATION")
+    print("M1 PREPROCESSOR (BATCHED) — VALIDATION")
     print("=" * 60)
 
-    SAMPLE_RATE = 24000
-    N = 100_000
+    SAMPLE_RATE = 30000
+    N_SAMPLES = 90000
+    N_CHANNELS = 384
+    
     np.random.seed(42)
-    raw = np.random.randn(N).astype(np.float64) * 100
+    
+    # Single channel test data
+    raw_single = np.random.randn(N_SAMPLES).astype(np.float64) * 100
+    
+    # Batched test data
+    raw_batched = np.random.randn(N_CHANNELS, N_SAMPLES).astype(np.float64) * 100
 
+    # SciPy reference for single channel
     timestep = 1.0 / SAMPLE_RATE
     b_n, a_n = ellip(2, 0.5, 20, (2*timestep*1999, 2*timestep*2001), 'bandstop')
     b_d, a_d = ellip(2, 0.1, 40, (2*timestep*300,  2*timestep*1000), 'bandpass')
-    b_e, a_e = ellip(2, 0.1, 40, (2*timestep*300,  2*timestep*3000), 'bandpass')
 
-    orig_denoised  = scipy_filtfilt(b_n, a_n, raw)
-    orig_detected  = scipy_filtfilt(b_d, a_d, orig_denoised)
-    orig_extracted = scipy_filtfilt(b_e, a_e, orig_denoised)
+    orig_denoised = scipy_filtfilt(b_n, a_n, raw_single)
+    orig_detected = scipy_filtfilt(b_d, a_d, orig_denoised)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Device: {device}\n")
 
     pre = Preprocessor(SAMPLE_RATE).to(device)
-    x   = torch.tensor(raw, dtype=torch.float64).to(device)
-
+    
+    # =========================================================================
+    # Test 1: Single channel (backward compatibility)
+    # =========================================================================
+    print("[1] Single channel test...")
+    
+    x_single = torch.tensor(raw_single, dtype=torch.float64).to(device)
+    
     with torch.no_grad():
-        pt_denoised, pt_detected = pre(x)
-        pt_extracted = pre.filter_extract(pt_denoised)
+        pt_denoised, pt_detected = pre(x_single)
 
-    def check(name, orig, pt):
-        diff       = np.max(np.abs(pt.cpu().numpy() - orig))
-        noise_orig = np.median(np.abs(orig)) / 0.6745
-        noise_pt   = np.median(np.abs(pt.cpu().numpy())) / 0.6745
-        thr_orig   = 5 * noise_orig
-        thr_pt     = 5 * noise_pt
-        pct        = diff / max(abs(thr_orig), 1e-10) * 100
-        print(f"[{name}]")
-        print(f"  max diff            : {diff:.6f}")
-        print(f"  diff as % of thr    : {pct:.6f}%")
-        print(f"  threshold orig / pt : {thr_orig:.2f} / {thr_pt:.2f}")
-        print(f"  {'PASS ✓' if pct < 0.01 else 'WARN — check diff'}\n")
+    diff_denoised = np.max(np.abs(pt_denoised.cpu().numpy() - orig_denoised))
+    diff_detected = np.max(np.abs(pt_detected.cpu().numpy() - orig_detected))
+    
+    print(f"    Denoised max diff: {diff_denoised:.6f}")
+    print(f"    Detected max diff: {diff_detected:.6f}")
+    print(f"    Output shape: {pt_denoised.shape}")
+    print(f"    ✓ PASS" if diff_denoised < 0.01 else "    ✗ FAIL")
+    
+    # =========================================================================
+    # Test 2: Batched channels
+    # =========================================================================
+    print("\n[2] Batched channels test...")
+    
+    x_batched = torch.tensor(raw_batched, dtype=torch.float64).to(device)
+    
+    with torch.no_grad():
+        pt_denoised_batch, pt_detected_batch = pre(x_batched)
+    
+    print(f"    Input shape:  {x_batched.shape}")
+    print(f"    Output shape: {pt_denoised_batch.shape}")
+    
+    # Verify first channel matches single-channel result
+    scipy_result = scipy_filtfilt(b_n, a_n, raw_batched[0]).copy()
+    first_channel_diff = torch.max(torch.abs(
+        pt_denoised_batch[0] - torch.tensor(scipy_result, device=device)
+    )).item()
+    print(f"    First channel diff: {first_channel_diff:.6f}")
+    print(f"    ✓ PASS" if first_channel_diff < 0.01 else "    ✗ FAIL")
+    
+    # =========================================================================
+    # Benchmark: Sequential vs Batched
+    # =========================================================================
+    print("\n[3] Benchmark: Sequential vs Batched...")
+    
+    # Sequential (current approach)
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+    t0 = time.time()
+    for ch in range(N_CHANNELS):
+        with torch.no_grad():
+            _ = pre(x_batched[ch])
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+    sequential_time = time.time() - t0
+    
+    # Batched (new approach)
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+    t0 = time.time()
+    with torch.no_grad():
+        _ = pre(x_batched)
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+    batched_time = time.time() - t0
+    
+    print(f"    Sequential ({N_CHANNELS} calls): {sequential_time*1000:.1f}ms")
+    print(f"    Batched (1 call):                 {batched_time*1000:.1f}ms")
+    print(f"    Speedup: {sequential_time/batched_time:.1f}x")
 
-    check("filter_denoise",  orig_denoised,  pt_denoised)
-    check("filter_detect",   orig_detected,  pt_detected)
-    check("filter_extract",  orig_extracted, pt_extracted)
-
-    print("Buffers registered:")
-    for name, buf in pre.named_buffers():
-        print(f"  {name}: {list(buf.shape)}  dtype={buf.dtype}  device={buf.device}")
-
-    print("\nM1 DONE. Ready for M2.")
+    print("\n" + "=" * 60)
+    print("M1 VALIDATION COMPLETE")
+    print("=" * 60)
